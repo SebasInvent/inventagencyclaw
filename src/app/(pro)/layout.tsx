@@ -1,4 +1,7 @@
+"use client";
+
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export default function ProLayout({
   children,
@@ -6,11 +9,13 @@ export default function ProLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
-      <Sidebar variant="pro" />
-      <main className="pl-[280px] min-h-screen">
-        {children}
-      </main>
-    </div>
+    <ProtectedRoute requiredRole="professional">
+      <div className="min-h-screen">
+        <Sidebar variant="pro" />
+        <main className="pl-[280px] min-h-screen">
+          {children}
+        </main>
+      </div>
+    </ProtectedRoute>
   );
 }

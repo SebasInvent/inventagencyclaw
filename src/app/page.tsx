@@ -25,6 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useQuotations } from "@/lib/hooks/useQuotations";
+import { ProjectType, ComplexityLevel, TimelineType } from "@/lib/types/database";
+import LiquidMetalHero from "@/components/ui/liquid-metal-hero";
 
 const projectTypes = [
   { id: "mobile", icon: Smartphone, label: "App Móvil", desc: "iOS & Android" },
@@ -77,6 +80,8 @@ export default function Home() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedComplexity, setSelectedComplexity] = useState<string | null>(null);
   const [selectedTimeline, setSelectedTimeline] = useState<string | null>(null);
+  const [, setSaving] = useState(false);
+  const { saveQuotation } = useQuotations();
 
   const getEstimate = () => {
     if (!selectedComplexity || !selectedTimeline) return null;
@@ -84,10 +89,51 @@ export default function Home() {
     return complexity?.priceRange;
   };
 
+  const getEstimateNumbers = () => {
+    if (!selectedComplexity) return { min: 0, max: 0 };
+    const complexity = complexityLevels.find((c) => c.id === selectedComplexity);
+    if (!complexity) return { min: 0, max: 0 };
+    
+    const ranges: Record<string, { min: number; max: number }> = {
+      basic: { min: 5000, max: 10000 },
+      intermediate: { min: 10000, max: 25000 },
+      advanced: { min: 25000, max: 50000 },
+    };
+    
+    let { min, max } = ranges[selectedComplexity] || { min: 0, max: 0 };
+    
+    if (selectedTimeline === "express") {
+      min = Math.round(min * 1.3);
+      max = Math.round(max * 1.3);
+    } else if (selectedTimeline === "flexible") {
+      min = Math.round(min * 0.9);
+      max = Math.round(max * 0.9);
+    }
+    
+    return { min, max };
+  };
+
+  const handleShowEstimate = async () => {
+    setStep(4);
+    setSaving(true);
+    
+    const { min, max } = getEstimateNumbers();
+    
+    await saveQuotation({
+      projectType: selectedType as ProjectType,
+      complexity: selectedComplexity as ComplexityLevel,
+      timeline: selectedTimeline as TimelineType,
+      estimatedMin: min,
+      estimatedMax: max,
+    });
+    
+    setSaving(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-foreground/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
@@ -104,40 +150,27 @@ export default function Home() {
                 Iniciar Sesión
               </Button>
             </Link>
-            <Button size="sm" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Agendar Call
-            </Button>
+            <Link href="/book">
+              <Button size="sm" className="gap-2">
+                <Calendar className="h-4 w-4" />
+                Agendar Call
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <Badge variant="outline" className="mb-6">
-            Development on Demand
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Transforma tu idea en{" "}
-            <span className="gradient-text">realidad digital</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Cotiza tu proyecto en minutos, visualiza prototipos con IA, y trabaja
-            con un equipo de élite en desarrollo de software.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="gap-2" onClick={() => setStep(1)}>
-              Cotizar Proyecto
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              Ver Prototipo con IA
-            </Button>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section - Liquid Metal */}
+      <LiquidMetalHero
+        badge="Development on Demand"
+        title={<>Transforma tu idea en <span className="gradient-text">realidad digital</span></>}
+        subtitle="Cotiza tu proyecto en minutos, visualiza prototipos con IA, y trabaja con un equipo de élite en desarrollo de software."
+        primaryCtaLabel="Cotizar Proyecto"
+        secondaryCtaLabel="Ver Prototipo con IA"
+        onPrimaryCtaClick={() => setStep(1)}
+        onSecondaryCtaClick={() => {}}
+        features={["Prototipos con IA", "Equipo de Élite", "Entrega Garantizada"]}
+      />
 
       {/* Quoter Section */}
       <AnimatePresence mode="wait">
@@ -336,7 +369,7 @@ export default function Home() {
                     <Button
                       size="lg"
                       disabled={!selectedTimeline}
-                      onClick={() => setStep(4)}
+                      onClick={handleShowEstimate}
                       className="gap-2"
                     >
                       Ver Estimación
@@ -372,10 +405,12 @@ export default function Home() {
                         *Precio final después de Discovery Call
                       </p>
                       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Button size="lg" className="gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Agendar Discovery Call
-                        </Button>
+                        <Link href="/book">
+                          <Button size="lg" className="gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Agendar Discovery Call
+                          </Button>
+                        </Link>
                         <Button size="lg" variant="outline" className="gap-2">
                           <Sparkles className="h-4 w-4" />
                           Ver Prototipo con IA

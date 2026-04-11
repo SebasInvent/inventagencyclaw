@@ -1,0 +1,11 @@
+name = "inventagency-crm"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[vars]
+NEXT_PUBLIC_SUPABASE_URL = "https://syuxxszyvzfjqkvwojla.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5dXh4c3p5dnpmanFrdndvamxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODk3NDQsImV4cCI6MjA4ODU2NTc0NH0.5DhtcfT1GgipOau-ejr6HmhjVsRL4rj9TBeUR_GQOpo"
+NEXT_PUBLIC_APP_URL = "https://clients.inventagency.co"
+NEXT_PUBLIC_SITE_NAME = "InventAgency CRM"
+FROM_EMAIL = "hola@inventagency.co"

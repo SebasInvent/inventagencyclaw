@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -15,7 +16,6 @@ import {
   CreditCard,
   ChevronLeft,
   LogOut,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useTheme } from "@/components/providers/ThemeProvider";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 const clientNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -53,7 +56,14 @@ interface SidebarProps {
 export function Sidebar({ variant = "client" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { profile, signOut } = useAuth();
+  const { theme } = useTheme();
   const navItems = variant === "pro" ? proNavItems : clientNavItems;
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -71,23 +81,27 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2"
+                className="flex items-center"
               >
-                <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">invent</span>
-                  <span className="text-xs text-primary -mt-1">agency</span>
-                </div>
+                <Image
+                  src={theme === "dark" ? "/logo-white.png" : "/logo-black.png"}
+                  alt="InventAgency"
+                  width={120}
+                  height={60}
+                  className="h-8 w-auto"
+                />
               </motion.div>
             )}
           </AnimatePresence>
           
           {collapsed && (
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center mx-auto">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <Image
+              src={theme === "dark" ? "/logo-white.png" : "/logo-black.png"}
+              alt="InventAgency"
+              width={120}
+              height={60}
+              className="h-8 w-auto mx-auto"
+            />
           )}
 
           {!collapsed && (
@@ -143,6 +157,13 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
 
         <Separator />
 
+        {/* Theme Toggle */}
+        <div className="p-4 flex justify-center">
+          <ThemeToggle />
+        </div>
+
+        <Separator />
+
         {/* User section */}
         <div className="p-4">
           {collapsed ? (
@@ -155,9 +176,9 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
                   className="w-full"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/avatar.png" />
+                    <AvatarImage src={profile?.avatar_url || undefined} />
                     <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                      IA
+                      {getInitials(profile?.full_name)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -167,18 +188,26 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
           ) : (
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src="/avatar.png" />
+                <AvatarImage src={profile?.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary/20 text-primary">
-                  IA
+                  {getInitials(profile?.full_name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Usuario Demo</p>
+                <p className="text-sm font-medium truncate">
+                  {profile?.full_name || "Usuario"}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {variant === "pro" ? "Tech Lead" : "Cliente"}
+                  {profile?.role === "professional" ? "Profesional" : 
+                   profile?.role === "admin" ? "Admin" : "Cliente"}
                 </p>
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 shrink-0"
+                onClick={signOut}
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>

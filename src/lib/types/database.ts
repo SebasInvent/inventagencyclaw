@@ -120,6 +120,60 @@ export interface Quotation {
   created_at: string;
 }
 
+// =====================
+// COMPANY REGISTRATION TYPES
+// =====================
+
+export type CompanyPlan = "free" | "starter" | "business" | "premium";
+export type CompanyRegStatus = "draft" | "preview" | "paid" | "completed" | "downloaded";
+export type IdType = "CC" | "CE" | "Pasaporte" | "NIT";
+export type FounderRole = "socio" | "rep_legal_principal" | "rep_legal_suplente" | "junta_presidente" | "junta_vicepresidente" | "junta_miembro";
+export type ArbitrationType = "derecho" | "equidad";
+
+export interface CompanyRegistration {
+  id: string;
+  user_id: string;
+  plan: CompanyPlan;
+  payment_status: "free" | "pending" | "paid";
+  payment_reference: string | null;
+  payment_amount: number | null;
+  company_name: string;
+  city: string;
+  constitution_date: string;
+  object_description: string | null;
+  duration: string;
+  authorized_capital: number;
+  subscribed_capital: number;
+  paid_capital: number;
+  share_nominal_value: number;
+  total_shares: number;
+  arbitration_count: 1 | 3;
+  arbitration_type: ArbitrationType;
+  status: CompanyRegStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Founder {
+  id: string;
+  registration_id: string;
+  full_name: string;
+  id_type: IdType;
+  id_number: string;
+  id_expedition_place: string;
+  domicile: string;
+  share_percentage: number;
+  share_count: number | null;
+  share_value: number | null;
+  roles: FounderRole[];
+  display_order: number;
+  created_at: string;
+}
+
+export interface CompanyRegistrationWithFounders extends CompanyRegistration {
+  founders: Founder[];
+}
+
 // Extended types with relations
 export interface ProjectWithRelations extends Project {
   client?: Profile;

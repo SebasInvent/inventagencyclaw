@@ -13,63 +13,29 @@ import {
   AlertCircle,
   FileText,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useInvoices } from "@/lib/hooks/useInvoices";
 
-const invoices = [
-  {
-    id: "INV-2026-001",
-    project: "App de Telemedicina",
-    amount: 4000,
-    status: "paid",
-    issuedAt: "2026-01-05",
-    paidAt: "2026-01-07",
-    description: "Pago inicial - 50%",
-  },
-  {
-    id: "INV-2026-002",
-    project: "Sistema de Pagos",
-    amount: 5000,
-    status: "pending",
-    issuedAt: "2026-01-15",
-    dueDate: "2026-01-30",
-    description: "Pago inicial - 50%",
-  },
-  {
-    id: "INV-2025-015",
-    project: "Dashboard Analytics",
-    amount: 7500,
-    status: "paid",
-    issuedAt: "2025-12-01",
-    paidAt: "2025-12-03",
-    description: "Pago final - 50%",
-  },
-];
-
-const paymentMethods = [
-  {
-    id: "1",
-    type: "card",
-    brand: "Visa",
-    last4: "4242",
-    expiry: "12/27",
-    isDefault: true,
-  },
-];
-
-const statusConfig = {
+const statusConfig: Record<string, { label: string; icon: typeof CheckCircle2; color: string }> = {
+  draft: { label: "Borrador", icon: FileText, color: "text-gray-500 bg-gray-500/10" },
+  sent: { label: "Enviada", icon: Clock, color: "text-yellow-500 bg-yellow-500/10" },
   paid: { label: "Pagado", icon: CheckCircle2, color: "text-green-500 bg-green-500/10" },
-  pending: { label: "Pendiente", icon: Clock, color: "text-yellow-500 bg-yellow-500/10" },
   overdue: { label: "Vencido", icon: AlertCircle, color: "text-red-500 bg-red-500/10" },
+  cancelled: { label: "Cancelado", icon: AlertCircle, color: "text-gray-500 bg-gray-500/10" },
 };
 
 export default function BillingPage() {
-  const totalPaid = invoices
-    .filter((i) => i.status === "paid")
-    .reduce((sum, i) => sum + i.amount, 0);
-  const totalPending = invoices
-    .filter((i) => i.status === "pending")
-    .reduce((sum, i) => sum + i.amount, 0);
+  const { invoices, totalPaid, totalPending, totalOverdue, loading } = useInvoices();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -112,11 +78,13 @@ export default function BillingPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Facturas</p>
-                  <p className="text-3xl font-bold">{invoices.length}</p>
+                  <p className="text-sm text-muted-foreground">Vencido</p>
+                  <p className="text-3xl font-bold text-red-500">
+                    ${totalOverdue.toLocaleString()}
+                  </p>
                 </div>
-                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-primary" />
+                <div className="h-12 w-12 rounded-lg bg-red-500/10 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-red-500" />
                 </div>
               </div>
             </CardContent>
@@ -130,55 +98,66 @@ export default function BillingPage() {
           </TabsList>
 
           <TabsContent value="invoices" className="space-y-4">
-            {invoices.map((invoice) => {
-              const status = statusConfig[invoice.status as keyof typeof statusConfig];
-              const StatusIcon = status.icon;
+            {invoices.length === 0 ? (
+              <Card className="p-8 text-center">
+                <FileText className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No tienes facturas aún</p>
+              </Card>
+            ) : (
+              invoices.map((invoice) => {
+                const status = statusConfig[invoice.status] || statusConfig.draft;
+                const StatusIcon = status.icon;
 
-              return (
-                <Card key={invoice.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", status.color)}>
-                          <StatusIcon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{invoice.id}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {invoice.project}
-                            </Badge>
+                return (
+                  <Card key={invoice.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", status.color)}>
+                            <StatusIcon className="h-5 w-5" />
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {invoice.description}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{invoice.invoice_number}</p>
+                              {invoice.project && (
+                                <Badge variant="outline" className="text-xs">
+                                  {invoice.project.name}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {invoice.notes || `Factura ${invoice.invoice_number}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-xl font-bold">
+                              ${Number(invoice.amount).toLocaleString()} {invoice.currency}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {invoice.status === "paid" && invoice.paid_at
+                                ? `Pagado el ${new Date(invoice.paid_at).toLocaleDateString("es-ES")}`
+                                : invoice.due_date
+                                ? `Vence el ${new Date(invoice.due_date).toLocaleDateString("es-ES")}`
+                                : "Sin fecha de vencimiento"}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            {(invoice.status === "sent" || invoice.status === "overdue") && (
+                              <Button size="sm">Pagar</Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <p className="text-xl font-bold">
-                            ${invoice.amount.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {invoice.status === "paid"
-                              ? `Pagado el ${new Date(invoice.paidAt!).toLocaleDateString("es-ES")}`
-                              : `Vence el ${new Date(invoice.dueDate!).toLocaleDateString("es-ES")}`}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {invoice.status === "pending" && (
-                            <Button size="sm">Pagar</Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </TabsContent>
 
           <TabsContent value="methods" className="space-y-4">
@@ -190,40 +169,15 @@ export default function BillingPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {paymentMethods.map((method) => (
-                  <div
-                    key={method.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-secondary/30"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">
-                            {method.brand} •••• {method.last4}
-                          </p>
-                          {method.isDefault && (
-                            <Badge variant="secondary" className="text-xs">
-                              Principal
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Expira {method.expiry}
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      Editar
-                    </Button>
-                  </div>
-                ))}
+                <div className="text-center py-8 text-muted-foreground">
+                  <CreditCard className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No tienes métodos de pago configurados</p>
+                  <p className="text-sm">Próximamente podrás agregar tarjetas con Stripe</p>
+                </div>
 
-                <Button variant="outline" className="w-full gap-2">
+                <Button variant="outline" className="w-full gap-2" disabled>
                   <Plus className="h-4 w-4" />
-                  Agregar método de pago
+                  Agregar método de pago (Próximamente)
                 </Button>
               </CardContent>
             </Card>

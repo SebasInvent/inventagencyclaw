@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useCalls } from "@/lib/hooks/useCalls";
+import { useProjects } from "@/lib/hooks/useProjects";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   FolderKanban,
   Users,
@@ -17,124 +21,44 @@ import {
   AlertCircle,
   ArrowUpRight,
   Video,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const stats = [
-  {
-    title: "Proyectos Activos",
-    value: "8",
-    change: "+2 este mes",
-    trend: "up",
-    icon: FolderKanban,
-  },
-  {
-    title: "Clientes",
-    value: "12",
-    change: "+3 este mes",
-    trend: "up",
-    icon: Users,
-  },
-  {
-    title: "Calls esta semana",
-    value: "6",
-    change: "2 hoy",
-    trend: "neutral",
-    icon: Calendar,
-  },
-  {
-    title: "Revenue mensual",
-    value: "$45,000",
-    change: "+15%",
-    trend: "up",
-    icon: DollarSign,
-  },
-];
-
-const activeProjects = [
-  {
-    id: "1",
-    name: "App de Telemedicina",
-    client: "MedCorp",
-    progress: 65,
-    status: "on_track",
-    dueDate: "Feb 28",
-    team: ["Ana M."],
-  },
-  {
-    id: "2",
-    name: "Sistema de Pagos",
-    client: "PayFast",
-    progress: 30,
-    status: "on_track",
-    dueDate: "Mar 15",
-    team: ["Luis G."],
-  },
-  {
-    id: "3",
-    name: "E-commerce Platform",
-    client: "ShopNow",
-    progress: 85,
-    status: "at_risk",
-    dueDate: "Jan 25",
-    team: ["Carlos R."],
-  },
-  {
-    id: "4",
-    name: "CRM Enterprise",
-    client: "BigCorp",
-    progress: 45,
-    status: "on_track",
-    dueDate: "Apr 10",
-    team: ["Ana M.", "Luis G."],
-  },
-];
-
-const todayCalls = [
-  {
-    id: "1",
-    title: "Sprint Review",
-    client: "MedCorp",
-    time: "10:00 AM",
-    duration: 60,
-  },
-  {
-    id: "2",
-    title: "Discovery Call",
-    client: "Nuevo Lead",
-    time: "2:00 PM",
-    duration: 60,
-  },
-];
-
-const recentActivity = [
-  {
-    id: "1",
-    type: "message",
-    content: "Nuevo mensaje de MedCorp en App de Telemedicina",
-    time: "Hace 5 min",
-  },
-  {
-    id: "2",
-    type: "payment",
-    content: "Pago recibido de PayFast - $5,000",
-    time: "Hace 1 hora",
-  },
-  {
-    id: "3",
-    type: "project",
-    content: "E-commerce Platform alcanzó 85% de progreso",
-    time: "Hace 2 horas",
-  },
-];
-
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string }> = {
+  draft: { label: "Borrador", color: "text-gray-500" },
+  quoted: { label: "Cotizado", color: "text-blue-500" },
+  in_progress: { label: "En progreso", color: "text-green-500" },
+  review: { label: "En revisión", color: "text-yellow-500" },
+  completed: { label: "Completado", color: "text-green-600" },
+  cancelled: { label: "Cancelado", color: "text-red-500" },
   on_track: { label: "En tiempo", color: "text-green-500" },
   at_risk: { label: "En riesgo", color: "text-yellow-500" },
   delayed: { label: "Retrasado", color: "text-red-500" },
 };
 
 export default function ProDashboardPage() {
+  const { upcomingCalls, calls, loading: callsLoading } = useCalls();
+  const { projects, loading: projectsLoading } = useProjects();
+
+  const today = new Date().toDateString();
+  const todayCalls = upcomingCalls.filter(
+    (call) => new Date(call.scheduled_at).toDateString() === today
+  );
+
+  const totalCalls = calls.length;
+  const activeProjects = projects.filter((p) =>
+    ["draft", "quoted", "in_progress", "review"].includes(p.status)
+  ).length;
+
+  if (callsLoading || projectsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <Header
@@ -145,7 +69,35 @@ export default function ProDashboardPage() {
       <div className="p-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
+          {[{
+            title: "Proyectos Activos",
+            value: activeProjects.toString(),
+            change: `${projects.length} total`,
+            trend: "up",
+            icon: FolderKanban,
+          },
+          {
+            title: "Discovery Calls",
+            value: totalCalls.toString(),
+            change: `${todayCalls.length} hoy`,
+            trend: "up",
+            icon: Users,
+          },
+          {
+            title: "Calls Pendientes",
+            value: upcomingCalls.length.toString(),
+            change: "Próximas",
+            trend: "neutral",
+            icon: Calendar,
+          },
+          {
+            title: "Revenue Estimado",
+            value: "$45,000",
+            change: "Mensual",
+            trend: "up",
+            icon: DollarSign,
+          },
+          ].map((stat) => (
             <Card key={stat.title}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -184,7 +136,7 @@ export default function ProDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {activeProjects.map((project) => (
+                  {projects.slice(0, 4).map((project) => (
                     <div
                       key={project.id}
                       className="p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
@@ -194,34 +146,25 @@ export default function ProDashboardPage() {
                           <div className="flex items-center gap-2">
                             <h3 className="font-medium">{project.name}</h3>
                             <Badge variant="outline" className="text-xs">
-                              {project.client}
+                              {project.client?.company || project.client?.full_name || "Sin cliente"}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={cn(
                               "text-xs flex items-center gap-1",
-                              statusConfig[project.status as keyof typeof statusConfig].color
+                              statusConfig[project.status]?.color || "text-gray-500"
                             )}>
-                              {project.status === "on_track" ? (
+                              {project.status === "in_progress" ? (
                                 <CheckCircle2 className="h-3 w-3" />
                               ) : (
                                 <AlertCircle className="h-3 w-3" />
                               )}
-                              {statusConfig[project.status as keyof typeof statusConfig].label}
+                              {statusConfig[project.status]?.label || project.status}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              • Entrega: {project.dueDate}
+                              • Inicio: {project.start_date ? format(new Date(project.start_date), "dd MMM", { locale: es }) : "Sin fecha"}
                             </span>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {project.team.map((member, i) => (
-                            <Avatar key={i} className="h-7 w-7 border-2 border-background -ml-2 first:ml-0">
-                              <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
-                                {member.split(" ").map(n => n[0]).join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -244,62 +187,76 @@ export default function ProDashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Video className="h-5 w-5 text-primary" />
-                  Calls de Hoy
+                  Calls de Hoy ({todayCalls.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {todayCalls.map((call) => (
-                  <div
-                    key={call.id}
-                    className="p-3 rounded-lg bg-secondary/30"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{call.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {call.client}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-primary">
-                          {call.time}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {call.duration} min
-                        </p>
+                {todayCalls.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No hay calls programadas para hoy
+                  </p>
+                ) : (
+                  todayCalls.map((call) => (
+                    <div
+                      key={call.id}
+                      className="p-3 rounded-lg bg-secondary/30"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">Discovery Call</p>
+                          <p className="text-xs text-muted-foreground">
+                            {call.client?.full_name || call.client?.email || "Cliente"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-primary">
+                            {format(new Date(call.scheduled_at), "HH:mm", { locale: es })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {call.duration_minutes} min
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                <Button variant="outline" className="w-full">
-                  Ver calendario
+                  ))
+                )}
+                <Button variant="outline" className="w-full" asChild>
+                  <a href="/pro/calls">Ver calendario</a>
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
+            {/* Upcoming Calls */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
-                  Actividad Reciente
+                  Próximas Calls
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-3 p-2"
-                  >
-                    <div className="h-2 w-2 rounded-full bg-primary mt-2" />
-                    <div>
-                      <p className="text-sm">{activity.content}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.time}
-                      </p>
+                {upcomingCalls.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No hay calls próximas
+                  </p>
+                ) : (
+                  upcomingCalls.slice(0, 5).map((call) => (
+                    <div
+                      key={call.id}
+                      className="flex items-start gap-3 p-2"
+                    >
+                      <div className="h-2 w-2 rounded-full bg-primary mt-2" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {call.client?.full_name || call.client?.email || "Cliente"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(call.scheduled_at), "dd MMM 'a las' HH:mm", { locale: es })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>
