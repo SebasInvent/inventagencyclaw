@@ -38,7 +38,7 @@ export function StepArbitraje() {
             <Scale className="w-4 h-4" />
             Cantidad de árbitros
           </Label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => updateField("arbitration_count", 1)}
               className={`p-4 rounded-lg border text-center transition-colors ${
@@ -68,7 +68,7 @@ export function StepArbitraje() {
 
         <div className="space-y-3">
           <Label>Tipo de arbitraje</Label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(
               [
                 {

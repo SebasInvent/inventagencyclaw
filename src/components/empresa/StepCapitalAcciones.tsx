@@ -54,7 +54,7 @@ export function StepCapitalAcciones() {
             <DollarSign className="w-4 h-4" />
             Capital autorizado
           </Label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {SUGGESTED_CAPITALS.map((s) => (
               <button
                 key={s.label}
