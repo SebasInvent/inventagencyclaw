@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Paperclip, Search } from "lucide-react";
+import { Send, Paperclip, Search, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const conversations = [
@@ -69,14 +69,21 @@ const messages = [
 ];
 
 export default function MessagesPage() {
-  const [selectedConversation, setSelectedConversation] = useState(conversations[0]);
+  // On mobile we want to start in "list view" — no conversation selected yet.
+  // On md+ the layout has both panels visible, so we default to first conv.
+  const [selectedConversation, setSelectedConversation] = useState<
+    typeof conversations[number] | null
+  >(conversations[0]);
   const [newMessage, setNewMessage] = useState("");
 
   const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    console.log("Sending:", newMessage);
+    if (!newMessage.trim() || !selectedConversation) return;
     setNewMessage("");
   };
+
+  // On mobile: show only list when no conversation, only chat when one is selected.
+  const showListMobile = !selectedConversation;
+  const showChatMobile = !!selectedConversation;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -84,7 +91,12 @@ export default function MessagesPage() {
 
       <div className="flex-1 flex">
         {/* Conversations List */}
-        <div className="w-80 border-r border-border flex flex-col">
+        <div
+          className={cn(
+            "w-full md:w-80 border-r border-border flex-col",
+            showListMobile ? "flex" : "hidden md:flex",
+          )}
+        >
           <div className="p-4 border-b border-border">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -100,7 +112,7 @@ export default function MessagesPage() {
                   className={cn(
                     "w-full p-3 rounded-lg text-left transition-colors",
                     "hover:bg-secondary/50",
-                    selectedConversation.id === conv.id && "bg-secondary"
+                    selectedConversation?.id === conv.id && "bg-secondary"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -136,40 +148,55 @@ export default function MessagesPage() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div
+          className={cn(
+            "flex-1 flex-col",
+            showChatMobile ? "flex" : "hidden md:flex",
+          )}
+        >
           {/* Chat Header */}
-          <div className="h-16 border-b border-border px-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar>
+          <div className="h-16 border-b border-border px-3 md:px-6 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              {/* Back button — only on mobile */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedConversation(null)}
+                className="md:hidden shrink-0"
+                aria-label="Volver a conversaciones"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Avatar className="shrink-0">
                 <AvatarFallback className="bg-primary/20 text-primary">
-                  {selectedConversation.participants[0].name.split(" ").map((n) => n[0]).join("")}
+                  {selectedConversation?.participants[0].name.split(" ").map((n) => n[0]).join("")}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium">{selectedConversation.projectName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedConversation.participants[0].name} • {selectedConversation.participants[0].role}
+              <div className="min-w-0">
+                <p className="font-medium truncate">{selectedConversation?.projectName}</p>
+                <p className="text-xs md:text-sm text-muted-foreground truncate">
+                  {selectedConversation?.participants[0].name} • {selectedConversation?.participants[0].role}
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="shrink-0 hidden sm:inline-flex">
               Ver proyecto
             </Button>
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-6">
+          <ScrollArea className="flex-1 p-3 md:p-6">
             <div className="space-y-4 max-w-3xl mx-auto">
               {messages.map((message) => (
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-3",
+                    "flex gap-2 md:gap-3",
                     message.isOwn && "flex-row-reverse"
                   )}
                 >
                   {!message.isOwn && (
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 shrink-0">
                       <AvatarFallback className="bg-primary/20 text-primary text-xs">
                         {message.senderName.split(" ").map((n) => n[0]).join("")}
                       </AvatarFallback>
@@ -177,13 +204,13 @@ export default function MessagesPage() {
                   )}
                   <div
                     className={cn(
-                      "max-w-[70%] rounded-2xl px-4 py-2",
+                      "max-w-[80%] md:max-w-[70%] rounded-2xl px-4 py-2",
                       message.isOwn
                         ? "bg-primary text-primary-foreground rounded-br-md"
                         : "bg-secondary rounded-bl-md"
                     )}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm break-words">{message.content}</p>
                     <p
                       className={cn(
                         "text-[10px] mt-1",
@@ -199,9 +226,9 @@ export default function MessagesPage() {
           </ScrollArea>
 
           {/* Message Input */}
-          <div className="p-4 border-t border-border">
-            <div className="max-w-3xl mx-auto flex gap-3">
-              <Button variant="ghost" size="icon">
+          <div className="p-3 md:p-4 border-t border-border">
+            <div className="max-w-3xl mx-auto flex gap-2 md:gap-3 items-center">
+              <Button variant="ghost" size="icon" className="shrink-0">
                 <Paperclip className="h-5 w-5" />
               </Button>
               <Input
@@ -211,7 +238,12 @@ export default function MessagesPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 className="flex-1"
               />
-              <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim()}
+                size="icon"
+                className="shrink-0"
+              >
                 <Send className="h-5 w-5" />
               </Button>
             </div>
