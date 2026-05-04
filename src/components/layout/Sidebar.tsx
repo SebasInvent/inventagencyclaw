@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,8 @@ import {
   CreditCard,
   ChevronLeft,
   LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -55,24 +57,98 @@ interface SidebarProps {
 
 export function Sidebar({ variant = "client" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const { theme } = useTheme();
   const navItems = variant === "pro" ? proNavItems : clientNavItems;
 
+  // Close mobile drawer when route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
+  // Close mobile drawer with ESC
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
     <TooltipProvider delayDuration={0}>
+      {/* Mobile burger button — only visible < md */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setMobileOpen(true)}
+        className="fixed top-3 left-3 z-40 md:hidden bg-card/80 backdrop-blur-sm border border-border"
+        aria-label="Abrir menú"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/60 z-40 md:hidden"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden
+          />
+        )}
+      </AnimatePresence>
+
       <motion.aside
         initial={false}
         animate={{ width: collapsed ? 70 : 280 }}
         transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="fixed left-0 top-0 h-screen bg-card border-r border-border flex flex-col z-50"
+        className={cn(
+          "fixed left-0 top-0 h-screen bg-card border-r border-border flex flex-col z-50",
+          "max-md:transition-transform max-md:duration-300 max-md:ease-in-out",
+          !mobileOpen && "max-md:-translate-x-full",
+        )}
+        style={{
+          // Force full width on mobile (override the framer-motion animated width)
+          // Tailwind arbitrary `max-md:!w-[280px]` won't override inline style, so we set min-width here
+          minWidth: "min(280px, 85vw)",
+        }}
       >
+        {/* Mobile close button — visible only when drawer is open on mobile */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-3 right-3 z-10 md:hidden"
+          aria-label="Cerrar menú"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+
         {/* Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           <AnimatePresence mode="wait">
@@ -93,7 +169,7 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
               </motion.div>
             )}
           </AnimatePresence>
-          
+
           {collapsed && (
             <Image
               src={theme === "dark" ? "/logo-white.png" : "/logo-black.png"}
@@ -109,7 +185,9 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
               variant="ghost"
               size="icon"
               onClick={() => setCollapsed(true)}
-              className="h-8 w-8"
+              // Hide collapse button on mobile (we use the X button instead)
+              className="h-9 w-9 hidden md:inline-flex"
+              aria-label="Colapsar sidebar"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -124,14 +202,17 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+                  "flex items-center gap-3 px-3 py-3 md:py-2.5 rounded-lg transition-all",
                   "hover:bg-secondary",
                   isActive && "bg-primary/10 text-primary",
-                  collapsed && "justify-center px-2"
+                  collapsed && "justify-center px-2",
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+                <item.icon
+                  className={cn("h-5 w-5 shrink-0", isActive && "text-primary")}
+                />
                 {!collapsed && (
                   <span className={cn("text-sm", isActive && "font-medium")}>
                     {item.label}
@@ -198,15 +279,19 @@ export function Sidebar({ variant = "client" }: SidebarProps) {
                   {profile?.full_name || "Usuario"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {profile?.role === "professional" ? "Profesional" : 
-                   profile?.role === "admin" ? "Admin" : "Cliente"}
+                  {profile?.role === "professional"
+                    ? "Profesional"
+                    : profile?.role === "admin"
+                      ? "Admin"
+                      : "Cliente"}
                 </p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 shrink-0"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0"
                 onClick={signOut}
+                aria-label="Cerrar sesión"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
