@@ -1,5 +1,18 @@
-// Configuración de Supabase embebida en el build
+// Supabase config — pulled from environment variables only.
+// Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+// in .env.local (dev) and in Vercel/Cloudflare Pages env (prod).
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!url || !anonKey) {
+  // Fail loudly at startup instead of silently falling back to a stale URL.
+  throw new Error(
+    'Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and ' +
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY before building the app.',
+  )
+}
+
 export const supabaseConfig = {
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ehxvlivldrbpjsfefpqp.supabase.co",
-  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoeHZsaXZsZHJicGpzZmVmcHFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NjY4NzEsImV4cCI6MjA4NDQ0Mjg3MX0.WDaUOXFHFlwPAvibs6rDGYGYFIG_pB3iqjknZ0sk4Fo"
-};
+  url,
+  anonKey,
+}
