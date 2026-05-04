@@ -135,7 +135,7 @@ export function BookingCalendar({ onSlotSelect, selectedSlot }: BookingCalendarP
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-2 gap-2"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2"
               >
                 {slots.map((slot) => {
                   const isSelected = selectedSlot?.getTime() === slot.date.getTime();
